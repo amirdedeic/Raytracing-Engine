@@ -2,15 +2,16 @@
 #include <cmath>
 #include <vector>
 #include <limits>
+#include <string>
 
 using namespace std;
 
 // Constants
-const int Cw = 300;
-const int Ch = 300;
+const int Cw = 600;
+const int Ch = 600;
 const float Vw = 1.0f;
 const float Vh = 1.0f;
-const float d = 0.5f;
+const float d = 1.0f;
 
 // Vec3 struct
 struct Vec3 {
@@ -27,15 +28,31 @@ struct Vec3 {
     Vec3 operator+(const Vec3& other) const {
         return {x + other.x, y + other.y, z + other.z};
     }
+    
+    Vec3 operator/(float t) const {
+        return {x / t, y / t, z / t};
+    }
 };
 
 float dot(const Vec3& a, const Vec3& b) {
     return a.x * b.x + a.y * b.y + a.z * b.z;
 }
 
+float length(const Vec3& v) {
+    return sqrt(dot(v, v));
+}
+
 // Color struct
 struct Color {
     int r, g, b;
+    
+    Color operator*(float intensity) const {
+        return {
+            (int)(r * intensity),
+            (int)(g * intensity),
+            (int)(b * intensity)
+        };
+    }
 };
 
 // Sphere struct
@@ -45,11 +62,27 @@ struct Sphere {
     Color color;
 };
 
+// Light struct
+struct Light {
+    string type;  // "ambient", "point", "directional"
+    float intensity;
+    Vec3 position;   // for point lights
+    Vec3 direction;  // for directional lights
+};
+
 // Scene
 vector<Sphere> spheres = {
-    {{0, 0, 3}, 1, {255, 0, 0}},    // Red
-    {{2, 0, 4}, 1, {0, 0, 255}},     // Blue
-    {{-2, 0, 4}, 1, {0, 255, 0}}     // Green
+    {{0, -1, 3}, 1, {255, 0, 0}},      // Red
+    {{2, 0, 4}, 1, {0, 0, 255}},       // Blue
+    {{-2, 0, 4}, 1, {0, 255, 0}},      // Green
+    {{0, -5001, 0}, 5000, {255, 255, 0}} // Yellow floor
+};
+
+// Lights
+vector<Light> lights = {
+    {"ambient", 0.2f, {0,0,0}, {0,0,0}},
+    {"point", 0.6f, {2, 1, 0}, {0,0,0}},
+    {"directional", 0.2f, {0,0,0}, {1, 4, 4}}
 };
 
 Vec3 CanvasToViewport(int x, int y) {
@@ -74,6 +107,30 @@ pair<float, float> IntersectRaySphere(Vec3 O, Vec3 D, const Sphere& sphere) {
     return {t1, t2};
 }
 
+float ComputeLighting(Vec3 P, Vec3 N) {
+    float i = 0.0f;
+    
+    for (auto& light : lights) {
+        if (light.type == "ambient") {
+            i += light.intensity;
+        } else {
+            Vec3 L;
+            if (light.type == "point") {
+                L = light.position - P;
+            } else {  // directional
+                L = light.direction;
+            }
+            
+            float n_dot_l = dot(N, L);
+            if (n_dot_l > 0) {
+                i += light.intensity * n_dot_l / (length(N) * length(L));
+            }
+        }
+    }
+    
+    return i;
+}
+
 Color TraceRay(Vec3 O, Vec3 D, float t_min, float t_max) {
     float closest_t = INFINITY;
     Sphere* closest_sphere = nullptr;
@@ -95,7 +152,15 @@ Color TraceRay(Vec3 O, Vec3 D, float t_min, float t_max) {
         return {255, 255, 255}; // White background
     }
     
-    return closest_sphere->color;
+    // Compute intersection point and normal
+    Vec3 P = O + D * closest_t;
+    Vec3 N = P - closest_sphere->center;
+    N = N / length(N);
+    
+    // Compute lighting
+    float intensity = ComputeLighting(P, N);
+    
+    return closest_sphere->color * intensity;
 }
 
 void PutPixel(SDL_Renderer* renderer, int x, int y, Color color) {
@@ -107,7 +172,7 @@ int main(int argc, char* argv[]) {
     SDL_Init(SDL_INIT_VIDEO);
     
     SDL_Window* window = SDL_CreateWindow("Raytracer", 
-    SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, Cw, Ch, SDL_WINDOW_SHOWN);
+        SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, Cw, Ch, SDL_WINDOW_SHOWN);
     SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
     
     // Clear to black
