@@ -32,6 +32,10 @@ struct Vec3 {
     Vec3 operator/(float t) const {
         return {x / t, y / t, z / t};
     }
+
+    Vec3 operator-() const {
+        return {-x, -y, -z};
+    }
 };
 
 float dot(const Vec3& a, const Vec3& b) {
@@ -48,9 +52,9 @@ struct Color {
     
     Color operator*(float intensity) const {
         return {
-            (int)(r * intensity),
-            (int)(g * intensity),
-            (int)(b * intensity)
+            min(255, max(0, (int)(r * intensity))),
+            min(255, max(0, (int)(g * intensity))),
+            min(255, max(0, (int)(b * intensity)))
         };
     }
 };
@@ -60,6 +64,7 @@ struct Sphere {
     Vec3 center;
     float radius;
     Color color;
+    float specular;
 };
 
 // Light struct
@@ -72,16 +77,16 @@ struct Light {
 
 // Scene
 vector<Sphere> spheres = {
-    {{0, -1, 3}, 1, {255, 0, 0}},      // Red
-    {{2, 0, 4}, 1, {0, 0, 255}},       // Blue
-    {{-2, 0, 4}, 1, {0, 255, 0}},      // Green
-    {{0, -5001, 0}, 5000, {255, 255, 0}} // Yellow floor
+    {{0, -1, 3}, 1, {255, 0, 0}, 500},      // Red
+    {{2, 0, 4}, 1, {0, 0, 255}, 500},       // Blue
+    {{-2, 0, 4}, 1, {0, 255, 0}, 10},      // Green
+    {{0, -5001, 0}, 5000, {255, 255, 0}, 1000} // Yellow floor
 };
 
 // Lights
 vector<Light> lights = {
     {"ambient", 0.2f, {0,0,0}, {0,0,0}},
-    {"point", 0.6f, {2, 1, 0}, {0,0,0}},
+    {"point", 0.6f, {-2, 1.5, 0}, {0,0,0}},
     {"directional", 0.2f, {0,0,0}, {1, 4, 4}}
 };
 
@@ -107,7 +112,7 @@ pair<float, float> IntersectRaySphere(Vec3 O, Vec3 D, const Sphere& sphere) {
     return {t1, t2};
 }
 
-float ComputeLighting(Vec3 P, Vec3 N) {
+float ComputeLighting(Vec3 P, Vec3 N, Vec3 V, float s) {
     float i = 0.0f;
     
     for (auto& light : lights) {
@@ -121,9 +126,20 @@ float ComputeLighting(Vec3 P, Vec3 N) {
                 L = light.direction;
             }
             
+            // point
             float n_dot_l = dot(N, L);
             if (n_dot_l > 0) {
                 i += light.intensity * n_dot_l / (length(N) * length(L));
+            }
+
+            // specular
+            if (s != -1) {
+                Vec3 R = N * (2.0f * dot(N, L)) - L;
+                float r_dot_v = dot(R, V);
+
+                if (r_dot_v > 0) {
+                    i += light.intensity * pow(r_dot_v/(length(R) * length(V)), s);
+                }
             }
         }
     }
@@ -158,7 +174,7 @@ Color TraceRay(Vec3 O, Vec3 D, float t_min, float t_max) {
     N = N / length(N);
     
     // Compute lighting
-    float intensity = ComputeLighting(P, N);
+    float intensity = ComputeLighting(P, N, -D, closest_sphere->specular);
     
     return closest_sphere->color * intensity;
 }
