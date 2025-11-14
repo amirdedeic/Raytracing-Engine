@@ -12,6 +12,7 @@ const int Ch = 900;
 const float Vw = 1.5f;
 const float Vh = 1.5f;
 const float d = 1.0f;
+const int RECURSION_DEPTH = 3;
 
 // Vec3 struct
 struct Vec3 {
@@ -57,6 +58,14 @@ struct Color {
             min(255, max(0, (int)(b * intensity)))
         };
     }
+
+    Color operator+(const Color& other) const {
+        return {
+            min(255, r + other.r),
+            min(255, g + other.g),
+            min(255, b + other.b)
+        };
+    }
 };
 
 const Color BACKGROUND_COLOR = {255, 255, 255};
@@ -67,6 +76,7 @@ struct Sphere {
     float radius;
     Color color;
     float specular;
+    float reflective;
 };
 
 // Light struct
@@ -79,17 +89,18 @@ struct Light {
 
 // Scene
 vector<Sphere> spheres = {
-    {{0, -1, 3}, 1, {255, 0, 0}, 500},      // Red
-    {{2, 0, 4}, 1, {0, 0, 255}, 500},       // Blue
-    {{-2, 0, 4}, 1, {0, 255, 0}, 300},      // Green
-    {{0, -5001, 0}, 5000, {255, 255, 0}, 1000} // Yellow floor
+    {{0, -1, 3}, 1, {255, 0, 0}, 500, 0.2},      // Red
+    {{2, 0, 4}, 1, {0, 0, 255}, 500, 0.3},       // Blue
+    {{-2, 0, 4}, 1, {0, 255, 0}, 300, 0.4},      // Green
+    {{0, -5001, 0}, 5000, {255, 255, 0}, 1000, 0.0} // Yellow floor
 };
 
 // Lights
 vector<Light> lights = {
     {"ambient", 0.2f, {0,0,0}, {0,0,0}},
     {"point", 0.6f, {-2, 1.5, 0}, {0,0,0}},
-    {"directional", 0.2f, {0,0,0}, {1, -4, 4}}
+    {"directional", 0.2f, {0,0,0}, {1, -4, 4}},
+    {"point", 0.2f, {2, 2.5, 4}, {0,0,0}},
 };
 
 Vec3 CanvasToViewport(int x, int y) {
@@ -160,6 +171,7 @@ float ComputeLighting(Vec3 P, Vec3 N, Vec3 V, float s) {
             }
 
             
+
             // point
             float n_dot_l = dot(N, L);
             if (n_dot_l > 0) {
@@ -181,7 +193,11 @@ float ComputeLighting(Vec3 P, Vec3 N, Vec3 V, float s) {
     return i;
 }
 
-Color TraceRay(Vec3 O, Vec3 D, float t_min, float t_max) {
+Vec3 ReflectRay(Vec3 R, Vec3 N) {
+    return N * 2.0f * dot(N, R) - R;
+}
+
+Color TraceRay(Vec3 O, Vec3 D, float t_min, float t_max, int RECURSION_DEPTH) {
     auto [closest_sphere, closest_t] = ClosestIntersection(O, D, t_min, t_max);
     if (closest_sphere == nullptr) {
         return BACKGROUND_COLOR;
@@ -192,10 +208,21 @@ Color TraceRay(Vec3 O, Vec3 D, float t_min, float t_max) {
     Vec3 N = P - closest_sphere->center;
     N = N / length(N);
     
-    // Compute lighting
+    // Compute color by finding the intensity and the color
     float intensity = ComputeLighting(P, N, -D, closest_sphere->specular);
-    
-    return closest_sphere->color * intensity;
+    Color local_color = closest_sphere->color * intensity;
+
+    //
+    float r = closest_sphere->reflective;
+    if (RECURSION_DEPTH <= 0 || r <= 0) {
+        return local_color;
+    }
+
+    Vec3 R = ReflectRay(-D, N);
+    Color reflected_color = TraceRay(P, R, 0.001, INFINITY, RECURSION_DEPTH - 1);
+
+    return local_color * (1 - r) + reflected_color * r;
+
 }
 
 void PutPixel(SDL_Renderer* renderer, int x, int y, Color color) {
@@ -219,7 +246,7 @@ int main() { //int argc, char* argv[]) {
     for (int x = -Cw/2; x < Cw/2; x++) {
         for (int y = -Ch/2; y < Ch/2; y++) {
             Vec3 D = CanvasToViewport(x, y);
-            Color color = TraceRay(O, D, 1, INFINITY);
+            Color color = TraceRay(O, D, 1, INFINITY, RECURSION_DEPTH);
             PutPixel(renderer, x, y, color);
         }
     }
