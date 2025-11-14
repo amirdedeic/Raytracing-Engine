@@ -59,6 +59,8 @@ struct Color {
     }
 };
 
+const Color BACKGROUND_COLOR = {255, 255, 255};
+
 // Sphere struct
 struct Sphere {
     Vec3 center;
@@ -187,8 +189,9 @@ Color TraceRay(Vec3 O, Vec3 D, float t_min, float t_max) {
     }
     
     if (closest_sphere == nullptr) {
-        return {255, 255, 255}; // White background
+        return BACKGROUND_COLOR; // White background
     }
+
     
     // Compute intersection point and normal
     Vec3 P = O + D * closest_t;
