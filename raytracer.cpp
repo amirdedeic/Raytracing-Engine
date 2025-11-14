@@ -114,6 +114,26 @@ pair<float, float> IntersectRaySphere(Vec3 O, Vec3 D, const Sphere& sphere) {
     return {t1, t2};
 }
 
+pair<Sphere*, float> ClosestIntersection(Vec3 O, Vec3 D, float t_min, float t_max) {
+    float closest_t = INFINITY;
+    Sphere* closest_sphere = nullptr;
+    
+    for (auto& sphere : spheres) {
+        auto [t1, t2] = IntersectRaySphere(O, D, sphere);
+        
+        if (t1 >= t_min && t1 <= t_max && t1 < closest_t) {
+            closest_t = t1;
+            closest_sphere = &sphere;
+        }
+        if (t2 >= t_min && t2 <= t_max && t2 < closest_t) {
+            closest_t = t2;
+            closest_sphere = &sphere;
+        }
+    }
+    
+    return {closest_sphere, closest_t};
+}
+
 float ComputeLighting(Vec3 P, Vec3 N, Vec3 V, float s) {
     float i = 0.0f;
     
@@ -124,11 +144,21 @@ float ComputeLighting(Vec3 P, Vec3 N, Vec3 V, float s) {
             i += light.intensity;
         } else {
             Vec3 L;
+            float t_max;
             if (light.type == "point") {
                 L = light.position - P;
+                t_max = 1;
             } else {  // directional
                 L = light.direction;
+                t_max = INFINITY;
             }
+
+            // Shadow check
+            auto [shadow_sphere, shadow_t] = ClosestIntersection(P, L, 0.001, t_max);
+            if (shadow_sphere != nullptr) {
+                continue;
+            }
+
             
             // point
             float n_dot_l = dot(N, L);
@@ -151,48 +181,12 @@ float ComputeLighting(Vec3 P, Vec3 N, Vec3 V, float s) {
     return i;
 }
 
-pair<Sphere*, float> ClosestIntersection(Vec3 O, Vec3 D, float t_min, float t_max) {
-    float closest_t = INFINITY;
-    Sphere* closest_sphere = nullptr;
-    
-    for (auto& sphere : spheres) {
-        auto [t1, t2] = IntersectRaySphere(O, D, sphere);
-        
-        if (t1 >= t_min && t1 <= t_max && t1 < closest_t) {
-            closest_t = t1;
-            closest_sphere = &sphere;
-        }
-        if (t2 >= t_min && t2 <= t_max && t2 < closest_t) {
-            closest_t = t2;
-            closest_sphere = &sphere;
-        }
-    }
-    
-    return {closest_sphere, closest_t};
-}
-
 Color TraceRay(Vec3 O, Vec3 D, float t_min, float t_max) {
-    float closest_t = INFINITY;
-    Sphere* closest_sphere = nullptr;
-    
-    for (auto& sphere : spheres) {
-        auto [t1, t2] = IntersectRaySphere(O, D, sphere);
-        
-        if (t1 >= t_min && t1 <= t_max && t1 < closest_t) {
-            closest_t = t1;
-            closest_sphere = &sphere;
-        }
-        if (t2 >= t_min && t2 <= t_max && t2 < closest_t) {
-            closest_t = t2;
-            closest_sphere = &sphere;
-        }
-    }
-    
+    auto [closest_sphere, closest_t] = ClosestIntersection(O, D, t_min, t_max);
     if (closest_sphere == nullptr) {
-        return BACKGROUND_COLOR; // White background
+        return BACKGROUND_COLOR;
     }
 
-    
     // Compute intersection point and normal
     Vec3 P = O + D * closest_t;
     Vec3 N = P - closest_sphere->center;
@@ -209,7 +203,7 @@ void PutPixel(SDL_Renderer* renderer, int x, int y, Color color) {
     SDL_RenderDrawPoint(renderer, Cw/2 + x, Ch/2 - y);
 }
 
-int main(int argc, char* argv[]) {
+int main() { //int argc, char* argv[]) {
     SDL_Init(SDL_INIT_VIDEO);
     
     SDL_Window* window = SDL_CreateWindow("Raytracer", 
