@@ -7,10 +7,10 @@
 using namespace std;
 
 // Constants
-const int Cw = 600;
-const int Ch = 600;
-const float Vw = 1.0f;
-const float Vh = 1.0f;
+const int Cw = 900;
+const int Ch = 900;
+const float Vw = 1.5f;
+const float Vh = 1.5f;
 const float d = 1.0f;
 
 // Vec3 struct
@@ -79,7 +79,7 @@ struct Light {
 vector<Sphere> spheres = {
     {{0, -1, 3}, 1, {255, 0, 0}, 500},      // Red
     {{2, 0, 4}, 1, {0, 0, 255}, 500},       // Blue
-    {{-2, 0, 4}, 1, {0, 255, 0}, 10},      // Green
+    {{-2, 0, 4}, 1, {0, 255, 0}, 300},      // Green
     {{0, -5001, 0}, 5000, {255, 255, 0}, 1000} // Yellow floor
 };
 
@@ -87,7 +87,7 @@ vector<Sphere> spheres = {
 vector<Light> lights = {
     {"ambient", 0.2f, {0,0,0}, {0,0,0}},
     {"point", 0.6f, {-2, 1.5, 0}, {0,0,0}},
-    {"directional", 0.2f, {0,0,0}, {1, 4, 4}}
+    {"directional", 0.2f, {0,0,0}, {1, -4, 4}}
 };
 
 Vec3 CanvasToViewport(int x, int y) {
@@ -115,6 +115,8 @@ pair<float, float> IntersectRaySphere(Vec3 O, Vec3 D, const Sphere& sphere) {
 float ComputeLighting(Vec3 P, Vec3 N, Vec3 V, float s) {
     float i = 0.0f;
     
+    //# check if there is any intersection with another primative
+
     for (auto& light : lights) {
         if (light.type == "ambient") {
             i += light.intensity;
@@ -145,6 +147,26 @@ float ComputeLighting(Vec3 P, Vec3 N, Vec3 V, float s) {
     }
     
     return i;
+}
+
+pair<Sphere*, float> ClosestIntersection(Vec3 O, Vec3 D, float t_min, float t_max) {
+    float closest_t = INFINITY;
+    Sphere* closest_sphere = nullptr;
+    
+    for (auto& sphere : spheres) {
+        auto [t1, t2] = IntersectRaySphere(O, D, sphere);
+        
+        if (t1 >= t_min && t1 <= t_max && t1 < closest_t) {
+            closest_t = t1;
+            closest_sphere = &sphere;
+        }
+        if (t2 >= t_min && t2 <= t_max && t2 < closest_t) {
+            closest_t = t2;
+            closest_sphere = &sphere;
+        }
+    }
+    
+    return {closest_sphere, closest_t};
 }
 
 Color TraceRay(Vec3 O, Vec3 D, float t_min, float t_max) {
