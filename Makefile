@@ -1,4 +1,4 @@
-CXX = g++
+CXX = g++ -fopenmp
 CXXFLAGS = -std=c++17 -Wall -Wextra
 LDFLAGS = -lSDL2
 TARGET = raytracer

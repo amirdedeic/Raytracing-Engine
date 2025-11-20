@@ -3,6 +3,8 @@
 #include <vector>
 #include <limits>
 #include <string>
+#include <chrono>
+#include <iostream>
 
 using namespace std;
 
@@ -12,7 +14,7 @@ const int Ch = 900;
 const float Vw = 1.5f;
 const float Vh = 1.5f;
 const float d = 1.0f;
-const int RECURSION_DEPTH = 3;
+const int RECURSION_DEPTH = 0;
 
 // Vec3 struct
 struct Vec3 {
@@ -89,18 +91,18 @@ struct Light {
 
 // Scene
 vector<Sphere> spheres = {
-    {{0, -1, 3}, 1, {255, 0, 0}, 500, 0.2},      // Red
-    {{2, 0, 4}, 1, {0, 0, 255}, 500, 0.3},       // Blue
-    {{-2, 0, 4}, 1, {0, 255, 0}, 300, 0.4},      // Green
+    {{0, 0, 3}, 1, {255, 0, 0}, 500, 0.2},      // Red
+    {{3, 0, 6}, 1, {0, 0, 255}, 500, 0.3},       // Blue
+    {{-3, 0, 6}, 1, {0, 255, 0}, 300, 0.4},      // Green
     {{0, -5001, 0}, 5000, {255, 255, 0}, 1000, 0.0} // Yellow floor
 };
 
 // Lights
 vector<Light> lights = {
     {"ambient", 0.2f, {0,0,0}, {0,0,0}},
-    {"point", 0.6f, {-2, 1.5, 0}, {0,0,0}},
-    {"directional", 0.2f, {0,0,0}, {1, -4, 4}},
-    {"point", 0.2f, {2, 2.5, 4}, {0,0,0}},
+    {"point", 0.2f, {4, 2.5, 4}, {0,0,0}},
+    {"point", 0.2f, {2, 5, 4}, {0,0,0}},
+    // {"directional", 0.2f, {0,0,0}, {1, -4, 4}},
 };
 
 Vec3 CanvasToViewport(int x, int y) {
@@ -234,15 +236,19 @@ int main() { //int argc, char* argv[]) {
     SDL_Init(SDL_INIT_VIDEO);
     
     SDL_Window* window = SDL_CreateWindow("Raytracer", 
-        SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, Cw, Ch, SDL_WINDOW_SHOWN);
+    SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, Cw, Ch, SDL_WINDOW_SHOWN);
     SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
     
     // Clear to black
     SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
     SDL_RenderClear(renderer);
     
-    // Raytrace
-    Vec3 O = {0, 0, 0};
+
+
+    // Raytrace Process Begins. 
+    auto start = chrono::high_resolution_clock::now(); // begin recording load to screen benchmark
+    Vec3 O = {0, 0, -1};
+    // #pragma omp parallel for collapse(2)
     for (int x = -Cw/2; x < Cw/2; x++) {
         for (int y = -Ch/2; y < Ch/2; y++) {
             Vec3 D = CanvasToViewport(x, y);
@@ -252,6 +258,10 @@ int main() { //int argc, char* argv[]) {
     }
     
     SDL_RenderPresent(renderer);
+
+    auto end = chrono::high_resolution_clock::now();
+    auto duration = chrono::duration_cast<chrono::milliseconds>(end - start);
+    cout << "Render time: " << duration.count() << " ms" << endl;
     
     // Event loop
     bool running = true;
