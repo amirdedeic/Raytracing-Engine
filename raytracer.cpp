@@ -9,8 +9,8 @@
 using namespace std;
 
 // Constants
-const int Cw = 900;
-const int Ch = 900;
+const int Cw = 300;
+const int Ch = 300;
 const float Vw = 1.5f;
 const float Vh = 1.5f;
 const float d = 1.0f;
@@ -44,14 +44,12 @@ struct Vec3 {
 struct RotationMatrix {
     double m[3][3];
     
-    // Constructor from yaw and pitch angles
     RotationMatrix(double yaw, double pitch) {
         double cy = cos(yaw);
         double sy = sin(yaw);
         double cp = cos(pitch);
         double sp = sin(pitch);
         
-        // Yaw * Pitch rotation matrix
         m[0][0] = cy;      m[0][1] = 0;   m[0][2] = sy;
         m[1][0] = sy*sp;   m[1][1] = cp;  m[1][2] = -cy*sp;
         m[2][0] = -sy*cp;  m[2][1] = sp;  m[2][2] = cy*cp;
@@ -108,25 +106,22 @@ struct Sphere {
 
 // Light struct
 struct Light {
-    string type;  // "ambient", "point", "directional"
+    string type;
     float intensity;
-    Vec3 position;   // for point lights
-    Vec3 direction;  // for directional lights
+    Vec3 position;
+    Vec3 direction;
 };
 
 // Scene
 vector<Sphere> spheres = {
-    {{0, 0, 3}, 1, {255, 0, 0}, 500, 0.2},      // Red
-    {{3, 0, 6}, 1, {0, 0, 255}, 500, 0.3},       // Blue
-    {{-3, 0, 6}, 1, {0, 255, 0}, 300, 0.4},      // Green
-    {{0, -5001, 0}, 5000, {255, 255, 0}, 1000, 0.0} // Yellow floor
+    {{0, 0, 3}, 1, {255, 0, 0}, 500, 0.2},
+    {{3, 0, 6}, 1, {0, 0, 255}, 500, 0.3},
+    {{-3, 0, 6}, 1, {0, 255, 0}, 300, 0.4},
+    {{0, -5001, 0}, 5000, {255, 255, 0}, 1000, 0.0}
 };
 
 // Lights
 vector<Light> lights = {
-    // {"ambient", 0.2f, {0,0,0}, {0,0,0}},
-    // {"point", 0.2f, {4, 2.5, 4}, {0,0,0}},
-    // {"point", 0.2f, {2, 5, 4}, {0,0,0}},
     {"directional", 0.9f, {0,0,0}, {1, 4, 4}},
 };
 
@@ -174,8 +169,6 @@ pair<Sphere*, float> ClosestIntersection(Vec3 O, Vec3 D, float t_min, float t_ma
 
 float ComputeLighting(Vec3 P, Vec3 N, Vec3 V, float s) {
     float i = 0.0f;
-    
-    //# check if there is any intersection with another primative
 
     for (auto& light : lights) {
         if (light.type == "ambient") {
@@ -186,26 +179,21 @@ float ComputeLighting(Vec3 P, Vec3 N, Vec3 V, float s) {
             if (light.type == "point") {
                 L = light.position - P;
                 t_max = 1;
-            } else {  // directional
+            } else {
                 L = light.direction;
                 t_max = INFINITY;
             }
 
-            // Shadow check
             auto [shadow_sphere, shadow_t] = ClosestIntersection(P, L, 0.001, t_max);
             if (shadow_sphere != nullptr) {
                 continue;
             }
 
-            
-
-            // point
             float n_dot_l = dot(N, L);
             if (n_dot_l > 0) {
                 i += light.intensity * n_dot_l / (length(N) * length(L));
             }
 
-            // specular
             if (s != -1) {
                 Vec3 R = N * (2.0f * dot(N, L)) - L;
                 float r_dot_v = dot(R, V);
@@ -230,16 +218,13 @@ Color TraceRay(Vec3 O, Vec3 D, float t_min, float t_max, int RECURSION_DEPTH) {
         return BACKGROUND_COLOR;
     }
 
-    // Compute intersection point and normal
     Vec3 P = O + D * closest_t;
     Vec3 N = P - closest_sphere->center;
     N = N / length(N);
     
-    // Compute color by finding the intensity and the color
     float intensity = ComputeLighting(P, N, -D, closest_sphere->specular);
     Color local_color = closest_sphere->color * intensity;
 
-    //
     float r = closest_sphere->reflective;
     if (RECURSION_DEPTH <= 0 || r <= 0) {
         return local_color;
@@ -249,7 +234,6 @@ Color TraceRay(Vec3 O, Vec3 D, float t_min, float t_max, int RECURSION_DEPTH) {
     Color reflected_color = TraceRay(P, R, 0.001, INFINITY, RECURSION_DEPTH - 1);
 
     return local_color * (1 - r) + reflected_color * r;
-
 }
 
 void PutPixel(SDL_Renderer* renderer, int x, int y, Color color) {
@@ -257,54 +241,102 @@ void PutPixel(SDL_Renderer* renderer, int x, int y, Color color) {
     SDL_RenderDrawPoint(renderer, Cw/2 + x, Ch/2 - y);
 }
 
-int main() { //int argc, char* argv[]) {
+int main() {
     SDL_Init(SDL_INIT_VIDEO);
     
     SDL_Window* window = SDL_CreateWindow("Raytracer", 
     SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, Cw, Ch, SDL_WINDOW_SHOWN);
     SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
     
-    // Clear to black
     SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
     SDL_RenderClear(renderer);
     
-
-
-    // Raytrace Process Begins. 
-    auto start = chrono::high_resolution_clock::now(); // begin recording load to screen benchmark
-    Vec3 O = {0, 0, -0.1};
+    auto start = chrono::high_resolution_clock::now();
     
-    
-
-    double yaw_angle = 45.0;   
-    double pitch_angle = 0.0; 
-    
-    RotationMatrix rotation(yaw_angle, pitch_angle);
-
-
-    // #pragma omp parallel for collapse(2)
-    for (int x = -Cw/2; x < Cw/2; x++) {
-        for (int y = -Ch/2; y < Ch/2; y++) {
-            Vec3 D = rotation * CanvasToViewport(x, y);
-            Color color = TraceRay(O, D, 1, INFINITY, RECURSION_DEPTH);
-            PutPixel(renderer, x, y, color);
-        }
-    }
-    
-    SDL_RenderPresent(renderer);
-
-    auto end = chrono::high_resolution_clock::now();
-    auto duration = chrono::duration_cast<chrono::milliseconds>(end - start);
-    cout << "Render time: " << duration.count() << " ms" << endl;
-    
-    // Event loop
+    Vec3 camera_pos = {0, 0, -0.1};
+    double yaw = 0.0;
+    double pitch = 0.0;
+    bool needs_redraw = true;
     bool running = true;
     SDL_Event event;
+
     while (running) {
         while (SDL_PollEvent(&event)) {
             if (event.type == SDL_QUIT) {
                 running = false;
             }
+            else if (event.type == SDL_KEYDOWN) {
+                if (event.key.keysym.sym == SDLK_w) {
+                    Vec3 forward = {sin(yaw), 0, cos(yaw)};
+                    camera_pos = camera_pos + forward * 0.1;
+                    needs_redraw = true;
+                }
+                else if (event.key.keysym.sym == SDLK_s) {
+                    Vec3 forward = {sin(yaw), 0, cos(yaw)};
+                    camera_pos = camera_pos + forward * (-0.1);
+                    needs_redraw = true;
+                }
+                else if (event.key.keysym.sym == SDLK_a) {
+                    Vec3 right = {cos(yaw), 0, -sin(yaw)};
+                    camera_pos = camera_pos + right * (-0.1);
+                    needs_redraw = true;
+                }
+                else if (event.key.keysym.sym == SDLK_d) {
+                    Vec3 right = {cos(yaw), 0, -sin(yaw)};
+                    camera_pos = camera_pos + right * 0.1;
+                    needs_redraw = true;
+                }
+                else if (event.key.keysym.sym == SDLK_UP) {
+                    pitch -= 0.05;
+                    needs_redraw = true;
+                }
+                else if (event.key.keysym.sym == SDLK_DOWN) {
+                    pitch += 0.05;
+                    needs_redraw = true;
+                }
+                else if (event.key.keysym.sym == SDLK_LEFT) {
+                    yaw -= 0.05;
+                    needs_redraw = true;
+                }
+                else if (event.key.keysym.sym == SDLK_RIGHT) {
+                    yaw += 0.05;
+                    needs_redraw = true;
+                }
+            }
+            // else if (event.type == SDL_MOUSEMOTION) {
+            //     yaw += event.motion.xrel * 0.001;
+            //     pitch += event.motion.yrel * 0.001;
+            //     needs_redraw = true;
+            // }
+        }
+    
+        if (needs_redraw) {
+            RotationMatrix rotation(yaw, pitch);
+            vector<Color> pixels(Cw * Ch);
+            
+            #pragma omp parallel for collapse(2)
+            for (int x = -Cw/2; x < Cw/2; x++) {
+                for (int y = -Ch/2; y < Ch/2; y++) {
+                    Vec3 D = rotation * CanvasToViewport(x, y);
+                    Color color = TraceRay(camera_pos, D, 1, INFINITY, RECURSION_DEPTH);
+                    int idx = (x + Cw/2) + (y + Ch/2) * Cw;
+                    pixels[idx] = color;
+                }
+            }
+            
+            for (int x = -Cw/2; x < Cw/2; x++) {
+                for (int y = -Ch/2; y < Ch/2; y++) {
+                    int idx = (x + Cw/2) + (y + Ch/2) * Cw;
+                    PutPixel(renderer, x, y, pixels[idx]);
+                }
+            }
+            SDL_RenderPresent(renderer);
+            needs_redraw = false;
+            
+            auto end = chrono::high_resolution_clock::now();
+            auto duration = chrono::duration_cast<chrono::milliseconds>(end - start);
+            cout << "Render time: " << duration.count() << " ms" << endl;
+            start = chrono::high_resolution_clock::now();
         }
     }
     
