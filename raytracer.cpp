@@ -15,6 +15,7 @@ const float Vw = 1.5f;
 const float Vh = 1.5f;
 const float d = 1.0f;
 const int RECURSION_DEPTH = 0;
+const Uint8* keys = SDL_GetKeyboardState(NULL);
 
 // Vec3 struct
 struct Vec3 {
@@ -265,49 +266,42 @@ int main() {
             if (event.type == SDL_QUIT) {
                 running = false;
             }
-            else if (event.type == SDL_KEYDOWN) {
-                if (event.key.keysym.sym == SDLK_w) {
-                    Vec3 forward = {sin(yaw), 0, cos(yaw)};
-                    camera_pos = camera_pos + forward * 0.1;
-                    needs_redraw = true;
-                }
-                else if (event.key.keysym.sym == SDLK_s) {
-                    Vec3 forward = {sin(yaw), 0, cos(yaw)};
-                    camera_pos = camera_pos + forward * (-0.1);
-                    needs_redraw = true;
-                }
-                else if (event.key.keysym.sym == SDLK_a) {
-                    Vec3 right = {cos(yaw), 0, -sin(yaw)};
-                    camera_pos = camera_pos + right * (-0.1);
-                    needs_redraw = true;
-                }
-                else if (event.key.keysym.sym == SDLK_d) {
-                    Vec3 right = {cos(yaw), 0, -sin(yaw)};
-                    camera_pos = camera_pos + right * 0.1;
-                    needs_redraw = true;
-                }
-                else if (event.key.keysym.sym == SDLK_UP) {
-                    pitch -= 0.05;
-                    needs_redraw = true;
-                }
-                else if (event.key.keysym.sym == SDLK_DOWN) {
-                    pitch += 0.05;
-                    needs_redraw = true;
-                }
-                else if (event.key.keysym.sym == SDLK_LEFT) {
-                    yaw -= 0.05;
-                    needs_redraw = true;
-                }
-                else if (event.key.keysym.sym == SDLK_RIGHT) {
-                    yaw += 0.05;
-                    needs_redraw = true;
-                }
-            }
-            // else if (event.type == SDL_MOUSEMOTION) {
-            //     yaw += event.motion.xrel * 0.001;
-            //     pitch += event.motion.yrel * 0.001;
-            //     needs_redraw = true;
-            // }
+        }
+        if (keys[SDL_SCANCODE_W]) {
+            Vec3 forward = {sin(yaw), 0, cos(yaw)};
+            camera_pos = camera_pos + forward * 0.2;
+            needs_redraw = true;
+        }
+        if (keys[SDL_SCANCODE_S]) {
+            Vec3 forward = {sin(yaw), 0, cos(yaw)};
+            camera_pos = camera_pos + forward * (-0.2);
+            needs_redraw = true;
+        }
+        if (keys[SDL_SCANCODE_A]) {
+            Vec3 right = {cos(yaw), 0, -sin(yaw)};
+            camera_pos = camera_pos + right * (-0.2);
+            needs_redraw = true;
+        }
+        if (keys[SDL_SCANCODE_D]) {
+            Vec3 right = {cos(yaw), 0, -sin(yaw)};
+            camera_pos = camera_pos + right * 0.2;
+            needs_redraw = true;
+        }
+        if (keys[SDL_SCANCODE_UP]) {
+            pitch -= 0.15;
+            needs_redraw = true;
+        }
+        if (keys[SDL_SCANCODE_DOWN]) {
+            pitch += 0.15;
+            needs_redraw = true;
+        }
+        if (keys[SDL_SCANCODE_LEFT]) {
+            yaw -= 0.15;
+            needs_redraw = true;
+        }
+        if (keys[SDL_SCANCODE_RIGHT]) {
+            yaw += 0.15;
+            needs_redraw = true;
         }
     
         if (needs_redraw) {
