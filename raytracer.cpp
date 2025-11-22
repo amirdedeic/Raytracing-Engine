@@ -41,6 +41,31 @@ struct Vec3 {
     }
 };
 
+struct RotationMatrix {
+    double m[3][3];
+    
+    // Constructor from yaw and pitch angles
+    RotationMatrix(double yaw, double pitch) {
+        double cy = cos(yaw);
+        double sy = sin(yaw);
+        double cp = cos(pitch);
+        double sp = sin(pitch);
+        
+        // Yaw * Pitch rotation matrix
+        m[0][0] = cy;      m[0][1] = 0;   m[0][2] = sy;
+        m[1][0] = sy*sp;   m[1][1] = cp;  m[1][2] = -cy*sp;
+        m[2][0] = -sy*cp;  m[2][1] = sp;  m[2][2] = cy*cp;
+    }
+    
+    Vec3 operator*(const Vec3& v) const { 
+        return {
+            m[0][0]*v.x + m[0][1]*v.y + m[0][2]*v.z,
+            m[1][0]*v.x + m[1][1]*v.y + m[1][2]*v.z,
+            m[2][0]*v.x + m[2][1]*v.y + m[2][2]*v.z
+        };
+    }
+};
+
 float dot(const Vec3& a, const Vec3& b) {
     return a.x * b.x + a.y * b.y + a.z * b.z;
 }
@@ -99,10 +124,10 @@ vector<Sphere> spheres = {
 
 // Lights
 vector<Light> lights = {
-    {"ambient", 0.2f, {0,0,0}, {0,0,0}},
-    {"point", 0.2f, {4, 2.5, 4}, {0,0,0}},
-    {"point", 0.2f, {2, 5, 4}, {0,0,0}},
-    // {"directional", 0.2f, {0,0,0}, {1, -4, 4}},
+    // {"ambient", 0.2f, {0,0,0}, {0,0,0}},
+    // {"point", 0.2f, {4, 2.5, 4}, {0,0,0}},
+    // {"point", 0.2f, {2, 5, 4}, {0,0,0}},
+    {"directional", 0.9f, {0,0,0}, {1, 4, 4}},
 };
 
 Vec3 CanvasToViewport(int x, int y) {
@@ -247,11 +272,20 @@ int main() { //int argc, char* argv[]) {
 
     // Raytrace Process Begins. 
     auto start = chrono::high_resolution_clock::now(); // begin recording load to screen benchmark
-    Vec3 O = {0, 0, -1};
+    Vec3 O = {0, 0, -0.1};
+    
+    
+
+    double yaw_angle = 45.0;   
+    double pitch_angle = 0.0; 
+    
+    RotationMatrix rotation(yaw_angle, pitch_angle);
+
+
     // #pragma omp parallel for collapse(2)
     for (int x = -Cw/2; x < Cw/2; x++) {
         for (int y = -Ch/2; y < Ch/2; y++) {
-            Vec3 D = CanvasToViewport(x, y);
+            Vec3 D = rotation * CanvasToViewport(x, y);
             Color color = TraceRay(O, D, 1, INFINITY, RECURSION_DEPTH);
             PutPixel(renderer, x, y, color);
         }
