@@ -51,9 +51,9 @@ struct RotationMatrix {
         double cp = cos(pitch);
         double sp = sin(pitch);
         
-        m[0][0] = cy;      m[0][1] = 0;   m[0][2] = sy;
-        m[1][0] = sy*sp;   m[1][1] = cp;  m[1][2] = -cy*sp;
-        m[2][0] = -sy*cp;  m[2][1] = sp;  m[2][2] = cy*cp;
+        m[0][0] = cy;       m[0][1] = sy*sp;   m[0][2] = sy*cp;
+        m[1][0] = 0;        m[1][1] = cp;      m[1][2] = -sp;
+        m[2][0] = -sy;      m[2][1] = cy*sp;   m[2][2] = cy*cp;
     }
     
     Vec3 operator*(const Vec3& v) const { 
