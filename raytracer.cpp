@@ -9,12 +9,12 @@
 using namespace std;
 
 // Constants
-const int Cw = 300;
-const int Ch = 300;
+const int Cw = 280;
+const int Ch = 280;
 const float Vw = 1.5f;
 const float Vh = 1.5f;
-const float d = 1.0f;
-const int RECURSION_DEPTH = 0;
+const float d = 2.0f;
+const int RECURSION_DEPTH = 2;
 const Uint8* keys = SDL_GetKeyboardState(NULL);
 
 // Vec3 struct
@@ -115,7 +115,7 @@ struct Light {
 
 // Scene
 vector<Sphere> spheres = {
-    {{0, 0, 3}, 1, {255, 0, 0}, 500, 0.2},
+    {{0, 0, 3}, 1, {255, 0, 0}, 200, 0.2},
     {{3, 0, 6}, 1, {0, 0, 255}, 500, 0.3},
     {{-3, 0, 6}, 1, {0, 255, 0}, 300, 0.4},
     {{0, -5001, 0}, 5000, {255, 255, 0}, 1000, 0.0}
@@ -123,7 +123,7 @@ vector<Sphere> spheres = {
 
 // Lights
 vector<Light> lights = {
-    {"directional", 0.9f, {0,0,0}, {1, 4, 4}},
+    {"directional", 0.9f, {0,0,0}, {1, 4, -4}},
 };
 
 Vec3 CanvasToViewport(int x, int y) {
@@ -244,6 +244,7 @@ void PutPixel(SDL_Renderer* renderer, int x, int y, Color color) {
 
 int main() {
     SDL_Init(SDL_INIT_VIDEO);
+    // omp_set_num_threads(8);
     
     SDL_Window* window = SDL_CreateWindow("Raytracer", 
     SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, Cw, Ch, SDL_WINDOW_SHOWN);
