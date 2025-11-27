@@ -6,6 +6,10 @@
 #include <chrono>
 #include <iostream>
 
+#ifdef _WIN32
+#undef main
+#endif
+
 using namespace std;
 
 // Constants
@@ -13,7 +17,7 @@ const int Cw = 280;
 const int Ch = 280;
 const float Vw = 1.5f;
 const float Vh = 1.5f;
-const float d = 2.0f;
+const float d = 1.0f;
 const int RECURSION_DEPTH = 2;
 const Uint8* keys = SDL_GetKeyboardState(NULL);
 
